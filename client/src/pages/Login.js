@@ -31,22 +31,27 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // Assuming 'login' function handles API call and sets user context
       const result = await login(formData.email, formData.password);
       if (result.success) {
         navigate('/dashboard');
       }
     } catch (error) {
       console.error('Login error:', error);
+      // Display a user-friendly error message
+      toast.error(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
+    // This function should trigger the OAuth flow
     authAPI.googleLogin();
   };
 
   const handleInstagramLogin = () => {
+    // This function should trigger the OAuth flow
     authAPI.instagramLogin();
   };
 
@@ -168,25 +173,25 @@ const Login = () => {
               </div>
             </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Remember me
-              </label>
-            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Remember me
+                </label>
+              </div>
 
-            <div className="text-sm">
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                Forgot your password?
-              </a>
+              <div className="text-sm">
+                <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                  Forgot your password?
+                </a>
+              </div>
             </div>
-          </div>
 
             <div>
               <button
@@ -243,18 +248,18 @@ const Login = () => {
           </form>
         )}
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="font-medium text-primary-600 hover:text-primary-500"
-              >
-                Sign up for free
-              </Link>
-            </p>
-          </div>
-        </form>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link
+              to="/register"
+              className="font-medium text-primary-600 hover:text-primary-500"
+            >
+              Sign up for free
+            </Link>
+          </p>
+        </div>
+        {/* Removed the extra </form> tag here */}
       </div>
     </div>
   );
