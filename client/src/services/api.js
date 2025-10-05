@@ -1,131 +1,61 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// CRITICAL FIX: Ensure we read the Vercel variable.
+// Vercel sets environment variables that start with REACT_APP_
+const API_URL = process.env.REACT_APP_API_URL; 
 
-// Create axios instance
+if (!API_URL) {
+  // This error should only appear if the environment variable is missing on Vercel
+  console.error("CRITICAL ERROR: REACT_APP_API_URL environment variable is not set!");
+}
+
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Use the live URL defined on Vercel. Requests will look like: 
+  // https://rizzmate.onrender.com/api/auth/login
+  baseURL: API_URL, 
+  withCredentials: true, // IMPORTANT for sending cookies (session/auth)
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor to handle errors
+// Interceptor to automatically handle global errors (like 401 Unauthorized)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    const statusCode = error.response ? error.response.status : null;
+    
+    // Handle unauthorized (session expired or invalid token)
+    if (statusCode === 401) {
+      toast.error("Session expired. Please log in again.");
+    } 
+    
+    // For other failures (404, 500, etc.), display a generic message
+    if (statusCode && statusCode >= 400 && statusCode !== 401 && statusCode !== 403) {
+        const message = error.response.data?.message || `API Error: ${statusCode}`;
+        // toast.error(message);
     }
+
     return Promise.reject(error);
   }
 );
 
-// Auth API
 export const authAPI = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
-  register: (name, email, password) => api.post('/auth/register', { name, email, password }),
-  getCurrentUser: () => api.get('/auth/me'),
-  updatePreferences: (preferences) => api.put('/auth/preferences', preferences),
-  getUsage: () => api.get('/auth/usage'),
-  
-  // OAuth
-  googleLogin: () => window.location.href = `${API_BASE_URL}/auth/google`,
-  instagramLogin: () => window.location.href = `${API_BASE_URL}/auth/instagram`,
-  
-  // Phone authentication
-  sendOTP: (phoneNumber) => api.post('/auth/phone/send-otp', { phoneNumber }),
-  verifyOTP: (phoneNumber, otp) => api.post('/auth/phone/verify-otp', { phoneNumber, otp }),
-  
-  // Link additional auth methods
-  linkGoogle: (googleData) => api.post('/auth/link/google', googleData),
-  linkInstagram: (instagramData) => api.post('/auth/link/instagram', instagramData),
+  login: (email, password) => api.post('/api/auth/login', { email, password }),
+  register: (userData) => api.post('/api/auth/register', userData),
+  googleLogin: () => {
+    // Redirect browser to the backend Google OAuth route
+    window.location.href = `${API_URL}/api/auth/google`;
+  },
+  instagramLogin: () => {
+    // Redirect browser to the backend Instagram OAuth route
+    window.location.href = `${API_URL}/api/auth/instagram`;
+  },
+  logout: () => api.post('/api/auth/logout'),
 };
 
-// Chat API
 export const chatAPI = {
-  sendTextMessage: (message, profileId) => api.post('/chat/text', { message, profileId }),
-  sendImageMessage: (imageFile, profileId) => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    formData.append('profileId', profileId);
-    return api.post('/chat/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
-  sendVoiceMessage: (audioFile, profileId) => {
-    const formData = new FormData();
-    formData.append('audio', audioFile);
-    formData.append('profileId', profileId);
-    return api.post('/chat/voice', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
-  sendScreenshotMessage: (screenshotFile, profileId) => {
-    const formData = new FormData();
-    formData.append('screenshot', screenshotFile);
-    formData.append('profileId', profileId);
-    return api.post('/chat/screenshot', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
-  getConversation: (profileId) => api.get(`/chat/conversation/${profileId}`),
-  generateConversationStarters: (profileId) => api.get(`/chat/starters/${profileId}`),
+    // Example call to a chat initiation endpoint
+    sendMessage: (data) => api.post('/api/chat/send', data), 
 };
 
-// Profile API
-export const profileAPI = {
-  createProfile: (profileData) => api.post('/profile', profileData),
-  getProfiles: () => api.get('/profile'),
-  getProfile: (id) => api.get(`/profile/${id}`),
-  updateProfile: (id, profileData) => api.put(`/profile/${id}`, profileData),
-  deleteProfile: (id) => api.delete(`/profile/${id}`),
-  getProfileHistory: (id) => api.get(`/profile/${id}/history`),
-  getProfileStats: (id) => api.get(`/profile/${id}/stats`),
-};
-
-// Subscription API
-export const subscriptionAPI = {
-  getPlans: () => api.get('/subscription/plans'),
-  createPaymentIntent: (plan) => api.post('/subscription/create-payment-intent', { plan }),
-  confirmPayment: (paymentIntentId) => api.post('/subscription/confirm-payment', { paymentIntentId }),
-  getCurrentSubscription: () => api.get('/subscription/current'),
-  cancelSubscription: () => api.post('/subscription/cancel'),
-};
-
-// Upload API
-export const uploadAPI = {
-  uploadSingle: (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/upload/single', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
-  uploadMultiple: (files) => {
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    return api.post('/upload/multiple', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
-  getFile: (filename) => `${API_BASE_URL}/upload/${filename}`,
-  deleteFile: (filename) => api.delete(`/upload/${filename}`),
-};
 
 export default api;

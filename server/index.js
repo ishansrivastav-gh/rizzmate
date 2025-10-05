@@ -21,11 +21,12 @@ const uploadRoutes = require('./routes/upload');
 const app = express();
 const server = createServer(app);
 
-// CRITICAL FIX: Define the Client URL once for all CORS policies
-// Use the CLIENT_URL you set on Render (e.g., https://rizzmate-abcd.vercel.app)
-// MODIFIED: This ensures that if the CLIENT_URL isn't explicitly set, 
-// it will use the Render URL, preventing a crash back to localhost.
-const clientOrigin = process.env.CLIENT_URL || 'https://' + (process.env.RENDER_EXTERNAL_HOSTNAME || "http://localhost:3000");
+// CRITICAL FIX: Define the Client URL once for all CORS policies.
+// This is the final version to ensure no accidental fallback to "localhost" breaks the production app.
+const clientOrigin = process.env.CLIENT_URL || 
+                     (process.env.NODE_ENV === 'production' 
+                        ? process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.rizzmate.com' 
+                        : "http://localhost:3000");
 
 // 1. Configure CORS Options (to be reused by Express and Socket.io)
 const corsOptions = {
